@@ -1,4 +1,4 @@
-package grapecity.fittest;
+
 
 import android.content.Context;
 import android.graphics.Color;
