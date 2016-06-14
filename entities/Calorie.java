@@ -1,4 +1,4 @@
-package grapecity.fittest.entities;
+
 /**
  * Created by David.Bickford on 5/23/2016.
  */
