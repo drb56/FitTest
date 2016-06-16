@@ -1,4 +1,4 @@
-package grapecity.fittest;
+
 
 //import android.app.Fragment;
 import android.os.AsyncTask;
@@ -48,9 +48,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import grapecity.fittest.entities.ActivityDataPoint;
-import grapecity.fittest.entities.CalorieActivity;
-import grapecity.fittest.entities.DayActivities;
+<<<<<<< HEAD
+import fittest.entities.ActivityDataPoint;
+import fittest.entities.CalorieActivity;
+import fittest.entities.DayActivities;
+=======
+>>>>>>> c2eb68129a9cb9d8418da403876230132364560f
 
 /**
  * Created by David.Bickford on 6/9/2016.
