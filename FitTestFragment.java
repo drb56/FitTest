@@ -20,14 +20,23 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.fitness.ConfigApi;
 import com.google.android.gms.fitness.Fitness;
+import com.google.android.gms.fitness.FitnessActivities;
 import com.google.android.gms.fitness.data.Bucket;
 import com.google.android.gms.fitness.data.DataPoint;
 import com.google.android.gms.fitness.data.DataSet;
+import com.google.android.gms.fitness.data.DataSource;
 import com.google.android.gms.fitness.data.DataType;
 import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.data.Session;
 import com.google.android.gms.fitness.request.DataReadRequest;
+import com.google.android.gms.fitness.request.DataTypeCreateRequest;
+import com.google.android.gms.fitness.request.SessionInsertRequest;
+import com.google.android.gms.fitness.request.SessionReadRequest;
 import com.google.android.gms.fitness.result.DataReadResult;
+import com.google.android.gms.fitness.result.DataTypeResult;
+import com.google.android.gms.fitness.result.SessionReadResult;
 import com.google.android.gms.location.DetectedActivity;
 
 import java.io.FileDescriptor;
@@ -39,6 +48,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import grapecity.fittest.entities.ActivityDataPoint;
 import grapecity.fittest.entities.CalorieActivity;
 import grapecity.fittest.entities.DayActivities;
 
@@ -49,6 +59,8 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
 {
     private GoogleApiClient mClient = null;
     private static ArrayList<DayActivities> activities;
+    private static ArrayList<DayActivities> calories;
+    private static ArrayList<ActivityDataPoint> activityDataPointList;
     private static boolean added;
 
     @Override
@@ -57,11 +69,13 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
         View v = inflater.inflate(R.layout.activities_view, container, false);
 
         activities = new ArrayList<>();
+        activityDataPointList = new ArrayList<>();
         added = false;
 
         mClient = new GoogleApiClient.Builder(getContext())
                 .addApi(Fitness.HISTORY_API)
-                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ))
+                .addApi(Fitness.SESSIONS_API)
+                .addScope(new Scope(Scopes.FITNESS_ACTIVITY_READ_WRITE))
                 .addConnectionCallbacks(this)
                 .enableAutoManage(getActivity(), 0, new GoogleApiClient.OnConnectionFailedListener() {
                     @Override
@@ -88,8 +102,8 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
         activityList.add(7, "Walking");
         activityList.add(8, "Running");
         activityList.add(97, "Weight Lifting");
-        CalorieActivity currActivity;
-        DayActivities currDay;
+//        CalorieActivity currActivity;
+//        DayActivities currDay;
         Calendar currDate = Calendar.getInstance();
 
 //        Log.i("MyApp", "Data returned for Data type: " + dataSet.getDataType().getName());
@@ -99,62 +113,81 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
         for (DataPoint dp : dataSet.getDataPoints())
         {
             date = new Date(dp.getTimestamp(TimeUnit.MILLISECONDS));
-            Log.i("MyApp", "Data point:");
-            Log.i("MyApp", "\tType: " + dp.getDataType().getName());
-            Log.i("MyApp", "\tDate: " + df2.format(date));
-            Log.i("MyApp", "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
-            Log.i("MyApp", "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
-            for(Field field : dp.getDataType().getFields())
-            {
-                Log.i("MyApp", "\tField: " + field.getName() + " Value: " + dp.getValue(field));
-            }
+//            Log.i("MyApp", "Data point:");
+//            Log.i("MyApp", "\tType: " + dp.getDataType().getName());
+//            Log.i("MyApp", "\tDate: " + df2.format(date));
+//            Log.i("MyApp", "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
+//            Log.i("MyApp", "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
+//            for(Field field : dp.getDataType().getFields())
+//            {
+//                Log.i("MyApp", "\tField: " + field.getName() + " Value: " + dp.getValue(field));
+//            }
             int calories;
             String activity;
-            currDay = new DayActivities();
-            currDate.setTime(date);
-            currDay.setCalendar(currDate);
-            if(!added)
-            {
-                activities.add(currDay);
-                added = true;
-            }
 
-//            Log.i("MyApp", "You got after the add. size: " + activities.size());
-
-            int found = 0;
-            for(int i=0; i<activities.size(); i++)
+            ActivityDataPoint currActivity = new ActivityDataPoint();
+            currDate.setTime(new Date(dp.getStartTime(TimeUnit.MILLISECONDS)));
+            currActivity.setStartDate(currDate);
+            currDate.setTime(new Date(dp.getEndTime(TimeUnit.MILLISECONDS)));
+            currActivity.setEndDate(currDate);
+            for(Field field : dp.getDataType().getFields())
             {
-                DayActivities checkDay = activities.get(i);
-                if(checkDay.getDate().equals(currDay.getDate()))
+                if(field.getName().equals("activity"))
                 {
-                    currDay = activities.get(i);
-                    for(Field field : dp.getDataType().getFields())
-                    {
-                        currActivity = new CalorieActivity();
-                        if(field.getName().equals("activity"))
-                        {
-                            currActivity.setActivity(activityList.get(Integer.parseInt(dp.getValue(field).toString())));
-                            date = new Date(dp.getTimestamp(TimeUnit.MILLISECONDS));
-                            currDate.setTime(date);
-                            currActivity.setCalendar(currDate);
-                            currDay.addActivity(currActivity);
-                        }
-                        else if(field.getName().equals("calories"))
-                        {
-                            currActivity.setCalorie((int)Double.parseDouble(dp.getValue(field).toString()));
-                            date = new Date(dp.getTimestamp(TimeUnit.MILLISECONDS));
-                            currDate.setTime(date);
-                            currActivity.setCalendar(currDate);
-                            currDay.addActivity(currActivity);
-                        }
-                    }
-                    found = 1;
+                    currActivity.setActivity(activityList.get(Integer.parseInt(dp.getValue(field).toString())));
                 }
-                else if(found == 0 && i == activities.size()-1)
+                else if(field.getName().equals("calories"))
                 {
-                    activities.add(currDay);
+                    currActivity.setCalories((int)Double.parseDouble(dp.getValue(field).toString()));
                 }
             }
+            activityDataPointList.add(currActivity);
+
+
+//            currDay = new DayActivities();
+//            currDate.setTime(date);
+//            currDay.setCalendar(currDate);
+//            int found = 0;
+//
+//            if(!added)
+//            {
+//                activities.add(currDay);
+//                added = true;
+//            }
+//
+//            for(int i=0; i<activities.size(); i++)
+//            {
+//                DayActivities checkDay = activities.get(i);
+//                if(checkDay.getDate().equals(currDay.getDate()))
+//                {
+//                    currDay = activities.get(i);
+//                    for(Field field : dp.getDataType().getFields())
+//                    {
+//                        currActivity = new CalorieActivity();
+//                        if(field.getName().equals("activity"))
+//                        {
+//                            currActivity.setActivity(activityList.get(Integer.parseInt(dp.getValue(field).toString())));
+//                            date = new Date(dp.getTimestamp(TimeUnit.MILLISECONDS));
+//                            currDate.setTime(date);
+//                            currActivity.setCalendar(currDate);
+//                            currDay.addActivity(currActivity);
+//                        }
+//                        else if(field.getName().equals("calories"))
+//                        {
+//                            currActivity.setCalorie((int)Double.parseDouble(dp.getValue(field).toString()));
+//                            date = new Date(dp.getTimestamp(TimeUnit.MILLISECONDS));
+//                            currDate.setTime(date);
+//                            currActivity.setCalendar(currDate);
+//                            currDay.addActivity(currActivity);
+//                        }
+//                    }
+//                    found = 1;
+//                }
+//                else if(found == 0 && i == activities.size()-1)
+//                {
+//                    activities.add(currDay);
+//                }
+//            }
         }
     }
 
@@ -177,7 +210,6 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
             long startTime = cal.getTimeInMillis();
 
             DataReadRequest readRequest = new DataReadRequest.Builder()
-//                    .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
                     .aggregate(DataType.TYPE_CALORIES_EXPENDED, DataType.AGGREGATE_CALORIES_EXPENDED)
                     .aggregate(DataType.TYPE_ACTIVITY_SEGMENT, DataType.AGGREGATE_ACTIVITY_SUMMARY)
                     .bucketByTime(1, TimeUnit.DAYS)
@@ -185,8 +217,6 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
                     .build();
 
             DataReadResult dataReadResult = Fitness.HistoryApi.readData(mClient, readRequest).await(1, TimeUnit.MINUTES);
-
-//            ArrayList<DataSet> dataSets = new ArrayList<>();
 
             if (dataReadResult.getBuckets().size() > 0)
             {
@@ -208,18 +238,64 @@ public class FitTestFragment extends Fragment implements GoogleApiClient.Connect
             }
 
             SimpleDateFormat df2 = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
-            for(int i=0; i<activities.size(); i++)
+            SimpleDateFormat df1 = new SimpleDateFormat("MM/dd/yyyy");
+            for(int i=0; i<activityDataPointList.size(); i++)
             {
-                DayActivities currDay = activities.get(i);
-                Log.i("MyApp", "Activities for: " + df2.format(currDay.getCalendar().getTime()));
-                for(int j=0; j<currDay.getActivities().size(); j++)
-                {
-                    CalorieActivity currActivity = (CalorieActivity)currDay.getActivities().get(j);
-                    Log.i("MyApp", "\tActivity for: " + df2.format(currActivity.getCalendar().getTime()));
-                    Log.i("MyApp", "\tActivity : " + currActivity.getActivity());
-                    Log.i("MyApp", "\tCalories : " + currActivity.getCalorie());
-                }
+                ActivityDataPoint currDay = activityDataPointList.get(i);
+                Log.i("MyApp", "Activity for: " + df1.format(currDay.getStartDate().getTime()));
+                Log.i("MyApp", "\tActivity start: " + df2.format(currDay.getStartDate().getTime()));
+                Log.i("MyApp", "\tActivity end: " + df2.format(currDay.getEndDate().getTime()));
+                Log.i("MyApp", "\tActivity : " + currDay.getActivity());
+                Log.i("MyApp", "\tCalories : " + currDay.getCalories());
             }
+
+//            SimpleDateFormat df2 = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+//            for(int i=0; i<activities.size(); i++)
+//            {
+//                DayActivities currDay = activities.get(i);
+//                Log.i("MyApp", "Activities for: " + df2.format(currDay.getCalendar().getTime()));
+//                for(int j=0; j<currDay.getActivities().size(); j++)
+//                {
+//                    CalorieActivity currActivity = (CalorieActivity)currDay.getActivities().get(j);
+//                    Log.i("MyApp", "\tActivity for: " + df2.format(currActivity.getCalendar().getTime()));
+//                    Log.i("MyApp", "\tActivity : " + currActivity.getActivity());
+//                    Log.i("MyApp", "\tCalories : " + currActivity.getCalorie());
+//                }
+//            }
+
+
+
+
+
+//            SessionReadRequest sessionReadRequest = new SessionReadRequest.Builder()
+//                    .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)
+//                    .setSessionName("Week")
+//                    .read(DataType.TYPE_CALORIES_EXPENDED)
+//                    .build();
+//
+//
+//            SessionReadResult sessionReadResult = Fitness.SessionsApi.readSession(mClient, sessionReadRequest).await(1, TimeUnit.MINUTES);
+//
+//            Log.i("MyApp", "Number of returned sessions is: "
+//                    + sessionReadResult.getSessions().size());
+//
+//            if (sessionReadResult.getSessions().size() > 0)
+//            {
+//                Log.i("MyApp", "Number of returned sessions is: "
+//                        + sessionReadResult.getSessions().size());
+//                for (Session session : sessionReadResult.getSessions())
+//                {
+//                    List<DataSet> dataSets = sessionReadResult.getDataSet(session);
+//                    for (DataSet dataSet : dataSets)
+//                    {
+//                        dumpDataSet(dataSet);
+//                    }
+//                }
+//            }
+//            else
+//            {
+//                Log.i("MyApp", "No data");
+//            }
 
             return null;
         }
